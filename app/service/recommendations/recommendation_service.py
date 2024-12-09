@@ -1,3 +1,5 @@
+import json
+
 import numpy as np
 from sqlalchemy.orm import Session
 from app.models.user import User
@@ -20,15 +22,12 @@ class RecommendationService:
         redis_key = f"user:{user_id}"
 
         if self.redis_client.exists(redis_key):
-            sorted_scores = [
-                (float(score), int(attraction_id))
-                for attraction_id, score in self.redis_client.zrevrange(redis_key, 0, -1, withscores=True)
-            ]
+            sorted_attractions_ids = json.loads(self.redis_client.get(redis_key))
         else:
-            sorted_scores = self._compute_and_store_scores(user, redis_key)
+            sorted_attractions_ids = self._compute_and_store_scores(user, redis_key)
 
-        ordered_attractions_in_chunks = self._calculate_indices_to_return_attractions_in_chunks(sorted_scores, page,
-                                                                                                page_size)
+        ordered_attractions_in_chunks = (self._calculate_indices_to_return_attractions_in_chunks
+                                         (sorted_attractions_ids, page, page_size))
         return [TouristAttractionResponse.model_validate(attraction) for attraction in ordered_attractions_in_chunks]
 
     def _compute_and_store_scores(self, user: User, redis_key: str):
@@ -42,35 +41,34 @@ class RecommendationService:
                 embedding_bytes = self.redis_client.get(key)
                 attraction_embedding = np.frombuffer(embedding_bytes, dtype=np.float32)
                 if attraction_embedding.shape[0] != user_embedding.shape[0]:
-                    print(
-                        f"Skipping attraction {attraction_id} due to dimension mismatch: "
-                        f"user_embedding({user_embedding.shape[0]}) vs "
-                        f"attraction_embedding({attraction_embedding.shape[0]})"
-                    )
                     continue
                 score = cosine_similarity([user_embedding], [attraction_embedding])[0][0]
-                scores.append((score, attraction_id))
+                if score >= 0.85:
+                    scores.append((score, attraction_id))
 
-            sorted_scores = sorted(scores, key=lambda x: x[0], reverse=True)
+            sorted_attraction_ids = [attraction_id for _, attraction_id in sorted(scores, key=lambda x: x[0], reverse=True)][:1000]
+            self.redis_client.set(redis_key, json.dumps(sorted_attraction_ids))
+            self.redis_client.expire(redis_key, 86400)
+            #expires after 24 hours
 
-            for score, attraction_id in sorted_scores:
-                self.redis_client.zadd(redis_key, {attraction_id: float(score)})
-
-            return sorted_scores
+            return sorted_attraction_ids
         else:
             return None
 
-    def _calculate_indices_to_return_attractions_in_chunks(self, sorted_scores, page: int, page_size: int):
+    def _calculate_indices_to_return_attractions_in_chunks(self, sorted_attractions_ids, page: int, page_size: int):
         start_index = (page - 1) * page_size
         end_index = start_index + page_size
-        if sorted_scores:
-            paginated_scores = sorted_scores[start_index:end_index]
 
-            attraction_ids = [attraction_id for _, attraction_id in paginated_scores]
-            attractions = self.db.query(TouristAttraction).filter(TouristAttraction.id.in_(attraction_ids)).all()
+        if start_index >= len(sorted_attractions_ids):
+            return []
+
+        if sorted_attractions_ids:
+            paginated_ids = sorted_attractions_ids[start_index:end_index]
+
+            attractions = self.db.query(TouristAttraction).filter(TouristAttraction.id.in_(paginated_ids)).all()
 
             id_to_attraction = {attraction.id: attraction for attraction in attractions}
-            ordered_attractions = [id_to_attraction[attraction_id] for _, attraction_id in paginated_scores]
+            ordered_attractions = [id_to_attraction[attraction_id] for attraction_id in paginated_ids]
 
             return ordered_attractions
         else:
