@@ -6,3 +6,4 @@ recommendations_router = APIRouter(
 )
 
 from app.api.recommendations import basic_recommendations
+from app.api.recommendations import filtered_recommendations
