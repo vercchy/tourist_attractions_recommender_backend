@@ -20,3 +20,4 @@ class User(Base):
     country = relationship("Country")
     city = relationship("City")
     user_preferences = relationship("UserPreference", back_populates="user")
+    interactions = relationship("UserInteraction", back_populates="user")

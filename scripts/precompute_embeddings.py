@@ -1,5 +1,4 @@
 import pickle
-import redis
 from app.models.tourist_attraction import TouristAttraction
 from app.service.embedding import load_glove_model, compute_embedding
 from app.db.session import get_db
