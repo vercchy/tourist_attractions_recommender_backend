@@ -8,12 +8,16 @@ from fastapi import Depends
 @countries_router.get("")
 async def get_countries(db: Session = Depends(get_db)):
     service = CountryService(db)
-    countries = service.get_all_countries()
-    return countries
+    return service.get_all_countries()
 
 
 @countries_router.get("/{country_id}/cities")
 async def get_cities_in_country(country_id: int, db: Session = Depends(get_db)):
     service = CountryService(db)
-    cities_in_country = service.get_all_cities_in_country(country_id)
-    return cities_in_country
+    return service.get_all_cities_in_country(country_id)
+
+@countries_router.get("/{country_id}")
+async def get_country(country_id: int, db: Session = Depends(get_db)):
+    service = CountryService(db)
+    return service.get_country(country_id)
+

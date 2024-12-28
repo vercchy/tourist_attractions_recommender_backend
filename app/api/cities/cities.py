@@ -10,5 +10,11 @@ from fastapi import Depends
 @cities_router.get("")
 async def get_cities(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     city_service = CityService(db)
-    all_cities = city_service.get_all_cities()
-    return all_cities
+    return city_service.get_all_cities()
+
+@cities_router.get("/{city_id}")
+async def get_city(city_id: int, db: Session = Depends(get_db)):
+    city_service = CityService(db)
+    return city_service.get_city(city_id)
+
+

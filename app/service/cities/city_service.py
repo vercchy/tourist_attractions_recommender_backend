@@ -8,3 +8,6 @@ class CityService:
 
     def get_all_cities(self):
         return self.db.query(City).all()
+
+    def get_city(self, city_id: int):
+        return self.db.query(City).filter(City.id == city_id).first()

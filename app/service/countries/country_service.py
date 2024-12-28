@@ -15,3 +15,6 @@ class CountryService:
             return None
         return country.cities
 
+    def get_country(self, country_id: int):
+        return self.db.query(Country).filter(Country.id == country_id).first()
+
