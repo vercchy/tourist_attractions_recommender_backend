@@ -1,4 +1,4 @@
-1. Clone the repository locally
+1. Clone the repository locally (Make sure you have python version 3.12.* https://www.python.org/downloads/release/python-3123/ (Ideally 3.12.3)), to avoid troubles with the dependencies
 2. Cd into the root of the project and Set up a python virtual environment
 3. Activate the virtual environment (.\env\Scripts\activate)
 3. Install the required dependencies by running "pip install -r requirements.txt", or simply open the file in PyCharm and click on the suggestion for installing all dependencies
