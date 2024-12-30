@@ -1,13 +1,12 @@
-import numpy as np
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.models.user import User
 from app.models.user_preference import UserPreference
 from app.models.category import Category
-from app.utils.utils import hash_password
-from datetime import datetime
 from app.schemas.authentication_schemas import RegisterRequest
-from fastapi import HTTPException
-from ..embedding import load_glove_model, compute_embedding
+from app.utils.auth import hash_password
+from app.service.embedding import compute_embedding
+from datetime import datetime
 
 
 class RegisterService:

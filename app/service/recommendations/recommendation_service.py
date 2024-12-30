@@ -1,7 +1,7 @@
-from app.service.recommendations.base_service import BaseRecommendationService
-from app.models.user import User
 from fastapi import HTTPException
+from app.models.user import User
 from app.schemas.attractions_schema import TouristAttractionResponse
+from app.service.recommendations.base_service import BaseRecommendationService
 
 
 class RecommendationService(BaseRecommendationService):

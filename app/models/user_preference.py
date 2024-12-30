@@ -1,7 +1,6 @@
 from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 from app.db.session import Base
-from app.models.category import Category
 
 
 class UserPreference(Base):

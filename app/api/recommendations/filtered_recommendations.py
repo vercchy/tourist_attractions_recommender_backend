@@ -1,9 +1,9 @@
-from app.api.routers.recommendations_router import recommendations_router
-from sqlalchemy.orm import Session
 from fastapi import Depends
+from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.utils.redis import get_redis_client
-from app.utils.utils import decode_access_token
+from app.api.recommendations import recommendations_router
+from app.utils.auth import decode_access_token
 from app.service.recommendations.filtered_recommendation_service import FilteredRecommendationService
 
 

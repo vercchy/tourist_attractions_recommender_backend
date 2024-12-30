@@ -1,8 +1,8 @@
-from app.models.tourist_attraction import TouristAttraction
-from app.models.user import User
 from fastapi import HTTPException
-from app.service.recommendations.base_service import BaseRecommendationService
+from app.models.user import User
+from app.models.tourist_attraction import TouristAttraction
 from app.schemas.attractions_schema import TouristAttractionResponse
+from app.service.recommendations.base_service import BaseRecommendationService
 
 
 class FilteredRecommendationService(BaseRecommendationService):

@@ -1,9 +1,10 @@
 import pickle
-from app.models.tourist_attraction import TouristAttraction
-from app.service.embedding import load_glove_model, compute_embedding
-from app.db.session import get_db
 from sqlalchemy.orm import Session
+from app.db.session import get_db
+from app.models.tourist_attraction import TouristAttraction
 from app.utils.redis import get_redis_client
+from app.service.embedding import load_glove_model, compute_embedding
+
 
 EMBEDDINGS_FILE = "embeddings.pkl"
 

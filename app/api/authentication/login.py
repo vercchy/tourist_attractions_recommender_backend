@@ -1,8 +1,8 @@
-from app.api.routers.authentication_router import authentication_router
-from app.schemas.authentication_schemas import LoginRequest, TokenResponse
+from fastapi import Depends
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from fastapi import Depends
+from app.schemas.authentication_schemas import LoginRequest, TokenResponse
+from app.api.authentication import authentication_router
 from app.service.authentication.login_service import LoginService
 
 

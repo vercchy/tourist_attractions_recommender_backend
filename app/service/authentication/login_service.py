@@ -1,8 +1,8 @@
-from sqlalchemy.orm import Session
-from app.schemas.authentication_schemas import LoginRequest
-from app.models.user import User
-from app.utils.utils import verify_password, create_access_token
 from fastapi import HTTPException
+from sqlalchemy.orm import Session
+from app.models.user import User
+from app.schemas.authentication_schemas import LoginRequest
+from app.utils.auth import verify_password, create_access_token
 
 
 class LoginService:

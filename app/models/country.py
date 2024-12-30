@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, BigInteger, Float
-from app.db.session import Base
 from sqlalchemy.orm import relationship
+from app.db.session import Base
 
 
 class Country(Base):

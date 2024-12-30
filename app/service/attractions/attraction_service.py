@@ -1,17 +1,19 @@
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.models.tourist_attraction import TouristAttraction
 from app.models.user_interaction import UserInteraction
-from fastapi import HTTPException
+from app.service.recommendations.utils import InteractionsMatrixHelper
 
 class AttractionService:
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, redis_client):
         self.db = db
+        self.redis_client = redis_client
 
     def get_attraction(self, attraction_id: int):
         return self.db.query(TouristAttraction).filter(TouristAttraction.id == attraction_id).first()
 
-    def rate_attraction(self, attraction_id:int, user_id: int, rating:int):
+    async def rate_attraction(self, attraction_id: int, user_id: int, rating:int):
         attraction = self.get_attraction(attraction_id)
         if attraction is None:
             raise HTTPException(status_code=400, detail='Attraction not found')
@@ -31,4 +33,5 @@ class AttractionService:
             self.db.add(new_interaction)
 
         self.db.commit()
-        return {"message": "Rating submitted successfully"}
+        interactions_matrix_helper = InteractionsMatrixHelper(self.db, self.redis_client)
+        await interactions_matrix_helper.update_user_interactions_matrix(user_id, attraction_id, rating)

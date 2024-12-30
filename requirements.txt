@@ -12,3 +12,4 @@ gensim
 numpy
 redis
 scikit-learn
+scipy
