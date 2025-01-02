@@ -1,7 +1,5 @@
 import json
-import numpy as np
 from sqlalchemy.orm import Session
-from scipy.sparse import dok_matrix
 from app.models.user_interaction import UserInteraction
 from datetime import datetime
 
@@ -13,25 +11,13 @@ class InteractionsMatrixHelper:
 
 
     async def create_user_interactions_matrix(self):
-        max_user_id = self.db.query(UserInteraction.user_id).order_by(UserInteraction.user_id.desc()).first()[0] or 0
-        max_attraction_id = self.db.query(UserInteraction.attraction_id).order_by(UserInteraction.attraction_id.desc()).first()[0] or 0
-
-        matrix = dok_matrix((max_user_id, max_attraction_id), dtype=np.int32)
+        redis_data = {}
 
         interactions = self.db.query(UserInteraction).all()
-
         for interaction in interactions:
-            user_index = interaction.user_id - 1
-            attraction_index = interaction.attraction_id - 1
-            matrix[user_index, attraction_index] = interaction.rating
-
-        redis_data = {
-            f"{user_index},{attraction_index}": int(rating)
-            for (user_index, attraction_index), rating in matrix.items()
-        }
+            redis_data[f"{interaction.user_id},{interaction.attraction_id}"] = interaction.rating
 
         await self.redis_client.set(self.redis_key, json.dumps(redis_data))
-        return matrix
 
 
     async def update_user_interactions_matrix(self, user_id: int, attraction_id: int, rating: int):
@@ -40,7 +26,7 @@ class InteractionsMatrixHelper:
         else:
             redis_data = await self.redis_client.get(self.redis_key)
             matrix = json.loads(redis_data)
-            matrix[f"{user_id - 1},{attraction_id - 1}"] = rating
+            matrix[f"{user_id},{attraction_id}"] = rating
             await self.redis_client.set(self.redis_key, json.dumps(matrix))
 
 

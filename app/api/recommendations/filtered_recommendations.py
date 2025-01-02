@@ -8,7 +8,7 @@ from app.service.recommendations.filtered_recommendation_service import Filtered
 
 
 @recommendations_router.get("/filtered")
-def get_filtered_recommendations(
+async def get_filtered_recommendations(
         country_id: int,
         page: int = 1,
         page_size: int = 10,
@@ -18,4 +18,5 @@ def get_filtered_recommendations(
         payload=Depends(decode_access_token)):
     recommendation_service = FilteredRecommendationService(db, redis_client)
     user = payload.get("sub")
-    return recommendation_service.recommend(int(user), page, page_size, country_id, city_id)
+    recommendations = await recommendation_service.recommend(int(user), page, page_size, country_id, city_id)
+    return recommendations

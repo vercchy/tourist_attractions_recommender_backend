@@ -8,7 +8,7 @@ from app.service.recommendations.recommendation_service import RecommendationSer
 
 
 @recommendations_router.get("")
-def get_recommendations(
+async def get_recommendations(
         page: int = 1,
         page_size: int = 10,
         db: Session = Depends(get_db),
@@ -16,6 +16,7 @@ def get_recommendations(
         payload=Depends(decode_access_token)):
     recommendation_service = RecommendationService(db, redis_client)
     user = payload.get("sub")
-    return recommendation_service.recommend(int(user), page, page_size)
+    recommendations = await recommendation_service.recommend(int(user), page, page_size)
+    return recommendations
 
 
