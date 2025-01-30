@@ -1,7 +1,6 @@
 import json
 from sqlalchemy.orm import Session
 from app.models.user_interaction import UserInteraction
-from datetime import datetime
 
 class InteractionsMatrixHelper:
     def __init__(self, db: Session, redis_client):
