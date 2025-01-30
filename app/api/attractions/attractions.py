@@ -5,7 +5,7 @@ from app.utils.redis import get_redis_client
 from app.api.attractions import attractions_router
 from app.utils.auth import decode_access_token
 from app.service.attractions.attraction_service import AttractionService
-from app.service.collaborative_filtering.collaborative_model import prepare_to_trigger_training
+from app.service.collaborative_filtering.model_retrain_trigger import prepare_to_trigger_training
 
 
 @attractions_router.get('/{attraction_id}')

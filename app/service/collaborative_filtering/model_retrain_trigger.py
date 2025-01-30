@@ -7,8 +7,8 @@ from scipy.sparse.linalg import svds
 from app.models.user import User
 from app.models.user_interaction import UserInteraction
 from app.models.tourist_attraction import TouristAttraction
-from app.service.recommendations.utils import InteractionsMatrixHelper
 from datetime import datetime
+from app.service.collaborative_filtering.model_retrainer import gather_data_and_trigger_retraining
 
 async def train_and_cache_collaborative_model(db, redis_client):
     max_user_id = db.query(UserInteraction.user_id).order_by(UserInteraction.user_id.desc()).first()[0] or 0
@@ -21,22 +21,9 @@ async def train_and_cache_collaborative_model(db, redis_client):
     redis_data = await redis_client.get(redis_key)
     data = json.loads(redis_data)
 
-    rows, columns, values = [], [], []
+    matrix_csr = await create_sparse_matrix(data, max_user_id, max_attraction_id)
 
-    for key, value in data.items():
-        user_id, attraction_id = map(int, key.split(","))
-        rows.append(user_id)
-        columns.append(attraction_id)
-        values.append(value)
-
-    matrix_csr = csr_matrix((values, (rows, columns)), shape=(max_user_id + 1, max_attraction_id + 1), dtype=np.float32)
-
-    k = max(10, min(100, min(matrix_csr.shape[0], matrix_csr.shape[1]) // 10))
-
-    u, sigma, vt = svds(matrix_csr, k=k)
-    sigma = np.diag(sigma)
-
-    predicted_ratings = np.dot(np.dot(u, sigma), vt)
+    predicted_ratings = await make_predictions(matrix_csr)
 
     valid_attraction_ids = {
         attraction.id for attraction in db.query(TouristAttraction.id).all()
@@ -58,6 +45,27 @@ async def train_and_cache_collaborative_model(db, redis_client):
     await redis_client.delete("model_currently_trained")
 
     print("Collaborative filtering model trained and predictions cached")
+
+
+async def create_sparse_matrix(data, num_users, num_attractions):
+    rows, columns, values = [], [], []
+
+    for key, value in data.items():
+        user_id, attraction_id = map(int, key.split(","))
+        rows.append(user_id)
+        columns.append(attraction_id)
+        values.append(value)
+
+    return csr_matrix((values, (rows, columns)), shape=(num_users + 1, num_attractions + 1), dtype=np.float32)
+
+
+async def make_predictions(matrix_csr):
+    k = max(10, min(100, min(matrix_csr.shape[0], matrix_csr.shape[1]) // 10))
+
+    u, sigma, vt = svds(matrix_csr, k=k)
+    sigma = np.diag(sigma)
+
+    return np.dot(np.dot(u, sigma), vt)
 
 
 async def clear_user_predictions_after_gathering_new_data(redis_client):
@@ -84,19 +92,29 @@ async def prepare_to_trigger_training(db, redis_client, background_tasks: Backgr
 
 async def trigger_model_training_if_needed(db, redis_client, background_tasks: BackgroundTasks, change_threshold: float = 0.05):
     total_interactions = db.query(UserInteraction).count()
-    interactions_matrix_helper = InteractionsMatrixHelper(db, redis_client)
-    changes_count = await interactions_matrix_helper.count_changes_since_last_training_of_model()
+    changes_count = await count_changes_since_last_training_of_model(db, redis_client)
     #change_ratio = changes_count / total_interactions if total_interactions > 0 else 0
 
     #if change_ratio > change_threshold:
         #print("Triggering model training...")
-        #background_tasks.add_task(train_and_cache_collaborative_model, db, redis_client)
+        #background_tasks.add_task(gather_data_and_trigger_retraining, db, redis_client)
     if changes_count >= 1:
         print("Triggering model training...")
         await redis_client.set("model_currently_trained", "true")
-        background_tasks.add_task(train_and_cache_collaborative_model, db, redis_client)
+        background_tasks.add_task(gather_data_and_trigger_retraining, db, redis_client)
     else:
         print("Not enough changes since last model training")
+
+
+async def count_changes_since_last_training_of_model(db, redis_client):
+    last_training_time = await redis_client.get("collaborative_model_last_trained")
+    if last_training_time is not None:
+        last_training_time = datetime.fromisoformat(last_training_time.decode())
+    else:
+        last_training_time = datetime.min
+
+    change_count = db.query(UserInteraction).filter(UserInteraction.last_updated > last_training_time).count()
+    return change_count
 
 
 
