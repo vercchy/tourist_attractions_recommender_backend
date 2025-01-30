@@ -17,7 +17,7 @@ class RegisterService:
     def _create_user(self, user_data: RegisterRequest) -> User:
         hashed_password = hash_password(user_data.password)
         date_of_birth = datetime.strptime(user_data.date_of_birth, "%Y-%m-%d").date()
-        embedding = self.load_model_and_calculate_user_embedding(user_data.interests, user_data.preferences)
+        embedding = self.load_model_and_calculate_user_embedding(user_data.interests)
         new_user = User(
             first_name=user_data.first_name,
             last_name=user_data.last_name,
@@ -48,12 +48,7 @@ class RegisterService:
         new_user = self._create_user(user_data)
         self._add_user_preferences(user_data.preferences, new_user.id)
 
-    def load_model_and_calculate_user_embedding(self, interests: str, preferences: list[int]) -> bytes:
-        preferences_descriptions = self.get_preferences_descriptions(preferences)
-        combined_desc_of_user = f"{preferences_descriptions} {interests or ''}".strip()
-        embedding = compute_embedding(combined_desc_of_user, self.glove_model).tobytes()
+    def load_model_and_calculate_user_embedding(self, interests: str) -> bytes:
+        embedding = compute_embedding(interests, self.glove_model).tobytes()
         return embedding
 
-    def get_preferences_descriptions(self, preferences: list[int]) -> str:
-        categories = self.db.query(Category).filter(Category.id.in_(preferences)).all()
-        return " ".join(category.description for category in categories)

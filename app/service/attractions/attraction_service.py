@@ -2,7 +2,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.models.tourist_attraction import TouristAttraction
 from app.models.user_interaction import UserInteraction
-from app.service.recommendations.utils import InteractionsMatrixHelper
+from app.service.recommendations.initial_implementation_user_interaction_matrix import InteractionsMatrixHelper
 
 class AttractionService:
 
