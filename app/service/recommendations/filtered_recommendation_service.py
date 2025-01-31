@@ -21,9 +21,10 @@ class FilteredRecommendationService(BaseRecommendationService):
                 query = query.filter(TouristAttraction.city_id == city_id)
             attraction_ids = [attraction_id for attraction_id, in query.all()]
 
-            sorted_attraction_ids = await self.calculate_similarity_scores(user, attraction_ids)
+            high_rating_attractions = await self.concat_prepared_embeddings_and_make_predictions(user_id,
+                                                                                                 attraction_ids)
+            sorted_attraction_ids = await self.calculate_similarity_scores(user, high_rating_attractions)
 
-            sorted_attraction_ids = await self.obtain_collab_based_predictions_and_sort_in_order(user, sorted_attraction_ids) or sorted_attraction_ids
             await self.cache_sorted_ids(sorted_attraction_ids, redis_key, 1800)
 
         ordered_attractions_in_chunks = (await self.calculate_indices_to_return_attractions_in_chunks
