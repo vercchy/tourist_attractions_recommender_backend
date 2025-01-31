@@ -3,12 +3,16 @@ import numpy as np
 from sqlalchemy.orm import Session
 from sklearn.metrics.pairwise import cosine_similarity
 from app.models.tourist_attraction import TouristAttraction
+from app.service.collaborative_filtering.model_loader import load_pretrained_model
+import tensorflow as tf
 
 
 class BaseRecommendationService:
     def __init__(self, db: Session, redis_client):
         self.db = db
         self.redis_client = redis_client
+
+        self.model, self.embedding_model, self.user_encoder, self.attraction_encoder, self.scaler = load_pretrained_model()
 
     async def calculate_similarity_scores(self, user, attraction_ids):
         user_embedding = np.frombuffer(user.embedding, dtype=np.float32)
@@ -59,6 +63,43 @@ class BaseRecommendationService:
         id_to_attraction = {attraction.id: attraction for attraction in attractions}
         return [id_to_attraction[attraction_id] for attraction_id in paginated_ids]
 
+
+    async def prepare_embeddings_before_obtaining_predictions(self, user_id, unrated_attractions):
+        user_encoded = self.user_encoder.transform([user_id] * len(unrated_attractions))
+        attractions_encoded = self.attraction_encoder.transform(unrated_attractions)
+
+        user_ids_tensor = tf.constant(user_encoded, dtype=tf.int32)
+        attraction_ids_tensor = tf.constant(attractions_encoded, dtype=tf.int32)
+
+        user_embeddings, attraction_embeddings = self.embedding_model([user_ids_tensor, attraction_ids_tensor])
+
+        return user_embeddings, attraction_embeddings
+
+
+    async def concat_prepared_embeddings_and_make_predictions(self, user_id, unrated_attractions):
+        user_embeddings, attraction_embeddings = await self.prepare_embeddings_before_obtaining_predictions(
+            user_id, unrated_attractions
+        )
+
+        user_embeddings = tf.squeeze(user_embeddings, axis=1)
+        attraction_embeddings = tf.squeeze(attraction_embeddings, axis=1)
+
+        features = tf.concat([user_embeddings, attraction_embeddings], axis=-1).numpy()
+
+        scaled_features = self.scaler.transform(features)
+
+        predicted_ratings = self.model.predict(scaled_features).argmax(axis=1)
+
+        high_rating_attractions = [
+            unrated_attractions[i]
+            for i, rating in enumerate(predicted_ratings)
+            if rating == 4  # Rating 5 corresponds to index 4
+        ]
+
+        return high_rating_attractions
+
+
+    #It's only this method which is deprecated in here everything else is still used
     async def obtain_collab_based_predictions_and_sort_in_order(self, user, content_based_sorted_attraction_ids, collab_weight: float = 0.6, content_weight: float = 0.4):
         user_predictions_key = f"user:{user.id}:predictions"
 
