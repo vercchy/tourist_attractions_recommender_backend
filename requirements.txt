@@ -13,3 +13,8 @@ numpy
 redis
 scikit-learn
 scipy
+torch
+torchvision
+tensorflow
+joblib
+pandas
